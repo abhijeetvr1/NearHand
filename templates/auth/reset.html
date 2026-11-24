@@ -1,0 +1,2 @@
+{% extends 'auth/layout.html' %}{% block box %}<h2>Choose a new password</h2>
+<form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div><label for="p">New password</label><div class="pw"><input id="p" name="password" type="password" autocomplete="new-password" required autofocus><button type="button" data-pw>Show</button></div><div class="hint">8+ characters with a letter and a number.</div></div><button class="btn primary lg block">Update password</button></form>{% endblock %}
