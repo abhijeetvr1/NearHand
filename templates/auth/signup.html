@@ -1,0 +1,16 @@
+{% extends 'auth/layout.html' %}{% import '_m.html' as m with context %}{% block title %}Sign up · NearHand{% endblock %}
+{% block box %}<h2>Create your account</h2><p class="muted">Free to join. You can post work and find work with one account.</p>
+{% if closed %}<div class="notice" style="margin-bottom:14px">New accounts are paused for a short while. Please try again later.</div>{% endif %}
+<form method="post" action="{{ url_for('auth.signup') }}" novalidate><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div><label for="n">Full name</label><input id="n" name="name" value="{{ form.get('name','') }}" autocomplete="name" required autofocus>{{ m.err(errors,'name') }}</div>
+  <div><label for="e">Email</label><input id="e" name="email" type="email" value="{{ form.get('email','') }}" autocomplete="email" required>{{ m.err(errors,'email') }}</div>
+  <div><label for="p">Password</label><div class="pw"><input id="p" name="password" type="password" autocomplete="new-password" required><button type="button" data-pw>Show</button></div>{% if errors.get('password') %}{{ m.err(errors,'password') }}{% else %}<div class="hint">8+ characters with a letter and a number.</div>{% endif %}</div>
+  <div><label>Are you 18 or older?</label><div class="agechoice slim">
+    <label><input type="radio" name="age" value="adult" {{ 'checked' if form.get('age')=='adult' }}><span><b>Yes, 18+</b></span></label>
+    <label><input type="radio" name="age" value="minor" {{ 'checked' if form.get('age')=='minor' }}><span><b>No, under 18</b></span></label></div>
+    <div class="hint">Under-18 accounts only see work that is suitable for them and can't post work.</div>{{ m.err(errors,'age') }}</div>
+  <div><label style="margin:0;font-weight:500;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" name="terms" style="margin-top:4px"> <span>I agree to the <a class="brand-t" href="{{ url_for('support.page', name='terms') }}">Terms</a> and <a class="brand-t" href="{{ url_for('support.page', name='privacy') }}">Privacy Policy</a></span></label>{{ m.err(errors,'terms') }}</div>
+  <button class="btn primary lg block" {{ "disabled" if closed }}>Create account</button>
+</form>
+<p class="muted" style="text-align:center;margin-top:20px">Already have an account? <a class="brand-t" style="font-weight:700" href="{{ url_for('auth.login') }}">Log in</a></p>
+<p style="text-align:center;margin-top:10px"><a class="muted" href="{{ url_for('market.index') }}">Skip for now →</a></p>{% endblock %}
