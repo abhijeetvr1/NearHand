@@ -1,0 +1,24 @@
+{% extends 'base.html' %}{% import '_m.html' as m with context %}{% block title %}Chat · NearHand{% endblock %}
+{% block pagecls %}flush{% endblock %}{% block bodycls %}{{ 'chat-open' if active }}{% endblock %}{% block support %}{% endblock %}{% block footer %}{% endblock %}
+{% block content %}
+<div class="chat {{ 'has-active' if active }}">
+  <aside class="chat-list"><h2>Chat</h2>
+    {% for u, c in convos %}<a class="conv {{ 'on' if active and active.id == u.id }} {{ 'unread' if c.unread }}" href="{{ url_for('profile.thread', username=u.username) }}">{{ m.avatar(u, 48) }}<div class="meta"><div class="top"><b>{{ u.name }}</b><time>{{ c.last.created|ago }}</time></div><div class="last">{{ 'You: ' if c.last.sender_id == current_user.id }}{{ c.last.body }}</div></div>{% if c.unread %}<span class="badge-n">{{ c.unread }}</span>{% endif %}</a>
+    {% else %}<div class="chat-empty" style="height:auto;padding:36px 24px"><p>No chats yet. You can chat once you've applied to, or received an application from, each other.</p></div>{% endfor %}
+  </aside>
+  <section class="chat-pane">
+  {% if active %}
+    <header class="chat-head"><a class="iconbtn back" href="{{ url_for('profile.messages') }}" aria-label="Back to chats">{{ m.icon('back',18) }}</a>
+      <a class="row" style="gap:12px;flex:1;min-width:0" href="{{ url_for('profile.view', username=active.username) }}">{{ m.avatar(active, 42) }}<div class="t"><b>{{ active.name }}</b><span>{{ active.level }}{% if active.area %} · {{ active.area }}{% endif %}</span></div></a>
+      <details class="menu"><summary class="iconbtn" aria-label="More">⋮</summary><div class="pop">
+        <a href="{{ url_for('profile.view', username=active.username) }}">View profile</a>
+        <form method="post" action="{{ url_for('profile.block', username=active.username) }}" data-confirm="{{ 'Unblock' if i_blocked else 'Block' }} {{ active.name }}?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>{{ 'Unblock' if i_blocked else 'Block' }}</button></form>
+        <form method="post" action="{{ url_for('profile.report_user', username=active.username) }}" class="stack" style="padding:6px 12px 10px;--g:8px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label>Report this user</label><select name="reason" required><option value="">Reason…</option>{% for r in reasons %}<option>{{ r }}</option>{% endfor %}</select><button class="btn primary sm block">Send report</button></form></div></details></header>
+    <div class="chat-msgs" id="msgs" aria-live="polite"></div>
+    {% if can_send %}<form id="composer" method="post" class="chat-input"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><textarea name="body" rows="1" placeholder="Type a message" maxlength="1000" required enterkeyhint="send" aria-label="Message"></textarea><button class="send" aria-label="Send">{{ m.icon('send',20) }}</button></form>
+    {% else %}<div class="chat-note">You can't send messages in this chat.</div>{% endif %}
+    <script type="application/json" id="chat-data">{{ data|tojson }}</script>
+  {% else %}<div class="chat-empty"><div><span class="brand-t">{{ m.icon('chat',44) }}</span><h3 style="margin:10px 0 4px;color:var(--ink)">Your conversations</h3><p>Pick a chat on the left to read and reply.</p></div></div>{% endif %}
+  </section>
+</div>{% endblock %}
+{% block scripts %}{% if active %}<script src="{{ url_for('static', filename='js/chat.js') }}"></script>{% endif %}{% endblock %}
