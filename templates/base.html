@@ -1,0 +1,81 @@
+{% import '_m.html' as m with context %}<!doctype html>
+<html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="map-boundary" content="{{ map_boundary }}">
+<meta name="csrf" content="{{ csrf_token() }}"><meta name="theme-color" content="#06120F"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="NearHand"><meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}"><link rel="apple-touch-icon" href="{{ url_for('static', filename='images/icons/icon-192.png') }}"><link rel="icon" href="{{ url_for('static', filename='images/icons/icon-192.png') }}">
+<title>{% block title %}NearHand · Find local work, find reliable people{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head><body class="{% block bodycls %}{% endblock %}" data-auth="{{ 1 if current_user.is_authenticated else 0 }}" data-nid="{{ live.nid }}" data-mid="{{ live.mid }}" data-oid="{{ live.oid }}" data-page="{{ 'market' if request.endpoint=='market.index' else '' }}">
+{% block layout %}
+<div class="app">
+  <aside class="side" aria-label="Main">
+    <a class="logo" href="{{ url_for('market.landing') }}"><i>{{ m.icon('hand',18) }}</i>NearHand</a>
+    {% set ep = request.endpoint %}
+    <a class="item {{ 'on' if ep=='profile.dashboard' }}" href="{{ url_for('profile.dashboard') }}">{{ m.icon('home',20) }}Home</a>
+    <a class="item {{ 'on' if ep in ['market.index','orders.detail'] }}" href="{{ url_for('market.index') }}">{{ m.icon('search',20) }}Find Work</a>
+    <a class="item {{ 'on' if ep in ['profile.messages','profile.thread'] }}" href="{{ url_for('profile.messages') }}">{{ m.icon('chat',20) }}Chat<span class="badge-n" data-badge="m" style="margin-left:auto" {{ 'hidden' if not unread_m }}>{{ unread_m }}</span></a>
+    <a class="item {{ 'on' if ep=='profile.wallet' }}" href="{{ url_for('profile.wallet') }}">{{ m.icon('wallet',20) }}Wallet</a>
+    <a class="item {{ 'on' if ep in ['profile.view','profile.edit'] }}" href="{{ url_for('profile.me') if current_user.is_authenticated else url_for('auth.login') }}">{{ m.icon('user',20) }}Profile</a>
+    {% if current_user.is_authenticated and current_user.is_staff %}<a class="item" href="{{ url_for('admin.overview') }}">{{ m.icon('shield',20) }}{{ 'Admin' if current_user.is_admin else 'Moderation' }}</a>{% endif %}
+  </aside>
+  <div class="mcol" style="min-width:0">
+    {% block nav %}
+    <header class="topbar">
+      <a class="logo mlogo" href="{{ url_for('market.landing') }}"><i>{{ m.icon('hand',18) }}</i></a>
+      <form class="search" action="{{ url_for('market.index') }}" role="search">{{ m.icon('search',18) }}<input name="q" value="{{ request.args.get('q','') if request.endpoint=='market.index' else '' }}" placeholder="Search work, skills, category…" aria-label="Search"></form>
+      <div class="grow"></div>
+      <button class="chipbtn" data-loc-open aria-label="Set your location">{{ m.icon('pin',17) }}<span>{{ loc_name or ('Near you' if has_loc else 'Set location') }}</span></button>
+      <button class="iconbtn" data-sound-toggle aria-label="Toggle notification sound"><span class="vol-on">{{ m.icon('volume',18) }}</span><span class="vol-off">{{ m.icon('mute',18) }}</span></button>
+      {% if current_user.is_authenticated %}
+        <a class="btn primary desk" href="{{ url_for('orders.new') }}">{{ m.icon('plus',16) }}Post work</a>
+        <a class="iconbtn" href="{{ url_for('profile.notifications') }}" aria-label="Notifications">{{ m.icon('bell',20) }}<span class="dot" data-badge="n" {{ 'hidden' if not unread_n }}></span></a>
+        <details class="menu"><summary class="iconbtn" style="padding:0;overflow:hidden" aria-label="Account">{{ m.avatar(current_user, 44) }}</summary>
+          <div class="pop"><a href="{{ url_for('profile.me') }}">My profile &amp; settings</a><a href="{{ url_for('profile.wallet') }}">Wallet · <span data-balance>{{ current_user.balance|money }}</span></a><a href="{{ url_for('profile.history') }}">History &amp; earnings</a><a href="{{ url_for('profile.notifications') }}">Notifications</a>{% if current_user.is_staff %}<a href="{{ url_for('admin.overview') }}">{{ 'Admin panel' if current_user.is_admin else 'Moderation panel' }}</a>{% endif %}
+          <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>Log out</button></form></div></details>
+      {% else %}<a class="btn" href="{{ url_for('auth.login') }}">Log in</a><a class="btn primary desk" href="{{ url_for('auth.signup') }}">Sign up</a>{% endif %}
+    </header>{% endblock %}
+    {% if minor_off_hours %}<div class="sitebar" role="status"><b>You can't work more right now.</b><span>Under-18 accounts can work between 6:00 AM and 9:00 PM. You can still browse and message.</span></div>{% endif %}
+    {% if site.get('notice') or paused_labels %}<div class="sitebar" role="status">{% if site.get('notice') %}<b>{{ site.get('notice') }}</b>{% endif %}{% if paused_labels %}<span>Paused for now: {{ paused_labels|join(', ') }}.{% if current_user.is_authenticated and current_user.is_staff %} (Staff are not affected.){% endif %}</span>{% endif %}</div>{% endif %}
+    <main class="page {% block pagecls %}{% endblock %}">{% block content %}{% endblock %}</main>
+    {% block footer %}<footer class="footer"><div class="row between"><div><a href="{{ url_for('support.page', name='about') }}">About</a><a href="{{ url_for('support.page', name='safety') }}">Safety</a><a href="{{ url_for('support.page', name='terms') }}">Terms</a><a href="{{ url_for('support.page', name='privacy') }}">Privacy</a><a href="{{ url_for('support.page', name='contact') }}">Contact</a></div><span>© NearHand</span></div></footer>{% endblock %}
+  </div>
+</div>
+{% if current_user.is_authenticated %}
+<nav class="bottom" aria-label="Main">
+  <a href="{{ url_for('profile.dashboard') }}" class="{{ 'on' if request.endpoint=='profile.dashboard' }}">{{ m.icon('home',22) }}<span>Home</span></a>
+  <a href="{{ url_for('market.index') }}" class="{{ 'on' if request.endpoint in ['market.index','orders.detail'] }}">{{ m.icon('search',22) }}<span>Find</span></a>
+  <a class="post" href="{{ url_for('orders.new') }}" aria-label="Post work"><span class="pbtn">{{ m.icon('plus',26) }}</span></a>
+  <a href="{{ url_for('profile.messages') }}" class="{{ 'on' if request.endpoint in ['profile.messages','profile.thread'] }}">{{ m.icon('chat',22) }}<span>Chat</span><span class="badge-n" data-badge="m" {{ 'hidden' if not unread_m }}>{{ unread_m }}</span></a>
+  <a href="{{ url_for('profile.me') }}" class="{{ 'on' if request.endpoint in ['profile.view','profile.edit'] }}">{{ m.icon('user',22) }}<span>Profile</span></a></nav>{% endif %}
+{% endblock %}
+{% if welcome %}<dialog id="welcome" data-open="1"><h3>Welcome to NearHand 👋</h3><p class="muted" style="margin:6px 0 16px">Allow your location so we can show work near you, and show your route when you go to a job. Only an approximate area is saved on your profile. You can change this any time.</p>
+<button class="btn primary block" id="welcome-allow" type="button">{{ m.icon('locate',16) }}Allow location</button><button class="skip" id="welcome-skip" type="button">Not now</button></dialog>{% endif %}
+<dialog id="loc-dialog" class="wide" data-auth="{{ 1 if current_user.is_authenticated else 0 }}"{% if loc_xy %} data-lat="{{ loc_xy[0] }}" data-lng="{{ loc_xy[1] }}" data-name="{{ loc_name or '' }}"{% endif %}>
+  <div class="row between" style="margin-bottom:12px"><div><h3>Your work area</h3><p class="muted sm">Choose where you want to work and how far you can travel. The marketplace then shows only jobs inside this area.</p></div><button class="iconbtn" id="loc-close" aria-label="Close">{{ m.icon('x',18) }}</button></div>
+  <div class="mapsearch">{{ m.icon('search',16) }}<input id="loc-search" placeholder="Search a place, e.g. Bhagalpur" aria-label="Search a place" autocomplete="off"></div>
+  <div id="loc-map" class="mapbox"></div>
+  <div class="radiusbox"><label for="loc-radius">Work radius <b id="loc-radius-out"></b></label><input type="range" id="loc-radius" min="1" max="100" value="{{ work_radius }}"><div class="hint">Only an approximate point (about 1 km) is used. Your exact position is never stored.</div></div>
+  <div class="row between" style="margin-top:14px"><div class="row"><button class="btn sm" id="loc-detect" type="button">{{ m.icon('locate',16) }}Detect my location</button>{% if has_loc %}<button class="btn sm ghost" id="loc-clear" type="button">Turn off</button>{% endif %}</div><div class="row"><span class="muted sm" id="loc-label">{{ loc_name or '' }}</span><button class="btn primary" id="loc-save" type="button" {{ 'disabled' if not has_loc }}>Use this area</button></div></div>
+</dialog>
+<div id="toasts" aria-live="polite"></div>
+{% for cat, msg in get_flashed_messages(with_categories=true) %}<i hidden data-flash="{{ msg }}" data-kind="{{ cat }}"></i>{% endfor %}
+<dialog id="confirm"><h3>Are you sure?</h3><p id="confirm-msg" class="muted" style="margin:8px 0 18px"></p><div class="row" style="justify-content:flex-end"><button class="btn" id="confirm-no" type="button">Cancel</button><button class="btn primary" id="confirm-yes" type="button">Confirm</button></div></dialog>
+{% block support %}<button class="fab" id="fab" aria-label="Help and support">{{ m.icon('headset',24) }}</button>
+<section id="support" class="panel flat" aria-label="Support">
+  <h3 style="margin-bottom:8px">How can we help?</h3>
+  {% for q,a in [('How do I post work?','Tap Post work (18+ accounts), fill in the details, pin the location, optionally record a voice note of up to 1 min 30 s, review the summary and publish.'),('How do I apply?','Open any order and send a short note. The maker will accept or decline.'),('How does payment work?','Makers choose online (paid from their NearHand wallet when the job is completed), cash, or another method. The wallet is a demo: add money by paying the demo QR and asking an admin, and payouts are approved by an admin. No real money moves. Never pay anyone to get a job.'),('How does location matching work?','Set your work area and radius. You see jobs inside it, and you can only apply if you are within the radius the maker chose. Exact addresses go only to accepted workers.'),('What can under-18 accounts do?','They only see work that makers marked as suitable for under 18s, and they can apply but not post work.'),('How do I report an order?','Open the order and choose Report. Our team reviews every report.'),('How do ratings work?','After work is completed both sides rate each other. Reviews become public when both are in.'),('How do I change my profile?','Open Settings in the menu.')] %}
+  <details class="faq"><summary>{{ q }}</summary><p>{{ a }}</p></details>{% endfor %}
+  <h3 style="margin:16px 0 8px">Still stuck?</h3>
+  <form id="ticket-form" class="stack" style="--g:10px">
+    {% if not current_user.is_authenticated %}<input name="email" type="email" placeholder="Your email" required>{% endif %}
+    <input name="subject" placeholder="Subject" required maxlength="120"><textarea name="body" placeholder="Tell us what happened" required style="min-height:80px"></textarea>
+    <button class="btn primary block">Contact support</button></form>
+</section>
+{% endblock %}
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script src="{{ url_for('static', filename='js/audio.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body></html>
