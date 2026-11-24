@@ -1,0 +1,11 @@
+{% extends 'admin/layout.html' %}{% block page %}
+<div class="row between" style="margin-bottom:14px"><h1 style="font-size:28px">Market</h1><div class="row"><a class="btn sm" href="{{ url_for('admin.orders') }}">Manage orders</a><a class="btn sm" href="{{ url_for('market.index') }}">Open marketplace</a></div></div>
+<div data-region="mstats"><div class="stats" style="margin-bottom:22px">{% for l,v in stats %}<div class="stat"><b>{{ v }}</b><span>{{ l }}</span></div>{% endfor %}</div></div>
+<div class="charts">{% for id,t in [('orders','Jobs posted (30 days)'),('apps','Applications (30 days)'),('cats','Jobs by category'),('status','Jobs by status')] %}<div class="panel"><h3 style="margin-bottom:10px">{{ t }}</h3><canvas id="c-{{ id }}"></canvas></div>{% endfor %}</div>
+<div class="ugrid" style="margin-top:16px">
+ <div class="panel tbl"><h3 style="margin-bottom:8px">Busiest areas</h3><table><tr><th>Area</th><th>Jobs</th></tr>{% for a,n in areas %}<tr><td>{{ a }}</td><td>{{ n }}</td></tr>{% else %}<tr><td colspan="2" class="muted">No data</td></tr>{% endfor %}</table>
+  <h3 style="margin:16px 0 8px">Top makers</h3><table><tr><th>Maker</th><th>Jobs</th></tr>{% for u,n in makers %}<tr><td><a href="{{ url_for('admin.user_detail', uid=u.id) }}">{{ u.name }}</a> <span class="muted sm">{{ u.uid }}</span></td><td>{{ n }}</td></tr>{% else %}<tr><td colspan="2" class="muted">No data</td></tr>{% endfor %}</table></div>
+ <div class="panel tbl"><h3 style="margin-bottom:8px">Most applied open jobs</h3><table><tr><th>Job</th><th>Applicants</th><th>Pay</th></tr>{% for o in hot %}<tr><td><a href="{{ url_for('orders.detail', oid=o.id) }}">{{ o.title }}</a></td><td>{{ o.applicant_count }}</td><td>{{ o.pay_per_worker|money }}</td></tr>{% else %}<tr><td colspan="3" class="muted">No open jobs</td></tr>{% endfor %}</table></div></div>{% endblock %}
+{% block scripts %}<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>window.CHARTS={orders:{{ charts.orders|tojson }},apps:{{ charts.apps|tojson }},cats:{labels:{{ charts.cats.keys()|list|tojson }},data:{{ charts.cats.values()|list|tojson }},pie:1},status:{labels:{{ charts.status.keys()|list|tojson }},data:{{ charts.status.values()|list|tojson }},pie:1}};</script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>{% endblock %}
