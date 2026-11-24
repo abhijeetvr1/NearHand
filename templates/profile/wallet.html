@@ -1,0 +1,38 @@
+{% extends 'base.html' %}{% import '_m.html' as m with context %}{% block title %}Wallet · NearHand{% endblock %}
+{% block content %}
+<div class="pagehead" style="margin-bottom:22px"><h1 style="font-size:30px">Wallet</h1></div>
+<div class="wl"><div>
+  <div class="wl-card"><span style="opacity:.75;font-weight:600">Available balance</span><div class="bal" data-balance>{{ current_user.balance|money }}</div>
+    <p style="opacity:.8;font-size:13px">Online payments are released from here when a job is completed. Earnings arrive minus a {{ (config.PLATFORM_FEE*100)|round|int }}% platform fee.</p>
+    <div class="seg" data-tabs><button type="button" class="{{ 'on' if tab != 'withdraw' }}" data-wtab="add">{{ m.icon('down',16) }} Add money</button><button type="button" class="{{ 'on' if tab == 'withdraw' }}" data-wtab="withdraw">{{ m.icon('up',16) }} Payout</button></div></div>
+  <div class="demo-note">{{ m.icon('shield',16) }}<span><b>Demo wallet.</b> No real money moves. Your UID is <button type="button" class="linkbtn" data-copy="{{ current_user.uid }}">{{ current_user.uid }}</button>: give it to an admin if you need help.</span></div>
+
+  <div class="wl-form" data-wpane="add" {{ 'hidden' if tab == 'withdraw' }}>
+    {% if site.get('pause_deposits') == '1' and not current_user.is_staff %}<div class="notice">Add-money requests are paused for a short while.</div>{% endif %}
+    <form method="post" action="{{ url_for('profile.wallet_deposit') }}" class="stack"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div><label>1. Choose an amount (₹)</label><input name="amount" id="dep-amt" type="number" min="10" max="100000" required placeholder="e.g. 1000" data-qr-amount="#qr-img"></div>
+      <div class="amounts">{% for a in [500,1000,2000,5000] %}<button type="button" data-amt="{{ a }}">₹{{ '{:,}'.format(a) }}</button>{% endfor %}</div>
+      <div class="qrcard"><img id="qr-img" src="{{ url_for('profile.wallet_qr', amount=0) }}" width="168" height="168" alt="Demo payment QR code"><div><b>2. Scan the demo QR</b><p class="muted sm">This QR is only a test. It is not connected to a bank or UPI, so scanning it pays nothing.</p><span class="chip">{{ qr_label }}</span></div></div>
+      <div><label>3. Reference (any text, optional)</label><input name="ref" maxlength="40" placeholder="e.g. last 4 digits, or 'demo'"></div>
+      <button class="btn primary lg block">Ask an admin to add this money</button>
+      <p class="hint">An admin checks the request and adds the money to your wallet. You'll get a notification.</p>
+    </form></div>
+
+  <div class="wl-form" data-wpane="withdraw" {{ 'hidden' if tab != 'withdraw' }}>
+    {% if site.get('pause_payouts') == '1' and not current_user.is_staff %}<div class="notice">Payout requests are paused for a short while. Your money stays safe in your wallet.</div>{% endif %}
+    <form method="post" action="{{ url_for('profile.wallet_withdraw') }}" class="stack"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div><label>Amount (₹)</label><input name="amount" type="number" min="10" max="{{ current_user.balance or 0 }}" required placeholder="e.g. 500"></div>
+      <div class="amounts">{% for a in [500,1000,2000] %}{% if a <= (current_user.balance or 0) %}<button type="button" data-amt="{{ a }}">₹{{ '{:,}'.format(a) }}</button>{% endif %}{% endfor %}{% if current_user.balance %}<button type="button" data-amt="{{ current_user.balance }}">All</button>{% endif %}</div>
+      <div><label>UPI ID or bank account (fake is fine)</label><input name="dest" required maxlength="60" placeholder="name@upi"></div>
+      <button class="btn lg block" {{ 'disabled' if not current_user.balance }}>Request payout</button>
+      <p class="hint">The amount is held right away. An admin marks it paid (demo) or rejects it, and a rejected payout returns to your wallet.</p>
+    </form></div>
+</div>
+<div data-region="wallet"><div class="txhead"><h2>My requests</h2></div>
+  {% if reqs %}{% for r in reqs %}<div class="txrow"><span class="txic {{ 'out' if r.kind == 'payout' }}">{{ m.icon('up' if r.kind == 'payout' else 'down',18) }}</span><div class="grow"><b>{{ 'Payout' if r.kind == 'payout' else 'Add money' }} #{{ r.id }} · {{ r.amount|money }}</b><div class="muted sm">{{ r.created|dt('%d %b, %H:%M') }}{% if r.dest %} · {{ r.dest }}{% endif %}{% if r.admin_note %} · {{ r.admin_note }}{% endif %}</div></div>
+    <div class="amt"><span class="badge {{ 'b-open' if r.status == 'approved' else ('b-cancelled' if r.status == 'rejected' else 'b-in_progress') }}">{{ {'pending': 'Waiting', 'approved': 'Done', 'rejected': 'Rejected'}[r.status] }}</span>
+      {% if r.status == 'pending' %}<form method="post" action="{{ url_for('profile.wallet_cancel', rid=r.id) }}" data-confirm="Cancel this request?" style="margin-top:6px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn sm ghost">Cancel</button></form>{% endif %}</div></div>{% endfor %}
+  {% else %}<p class="muted sm" style="margin-bottom:18px">No requests yet.</p>{% endif %}
+  <div class="txhead" style="margin-top:22px"><h2>Transactions</h2><a class="sm brand-t" style="font-weight:700" href="{{ url_for('profile.history') }}">Jobs history →</a></div>
+  {% if txs %}{% for t in txs %}<div class="txrow"><span class="txic {{ 'out' if t.amount < 0 }}">{{ m.icon('down' if t.amount > 0 else 'up',18) }}</span><div class="grow"><b>{{ t.note or t.kind|capitalize }}</b><div class="muted sm">{{ t.created|dt('%d %b %Y, %H:%M') }}</div></div><div class="amt"><b class="{{ 'plus' if t.amount > 0 else 'minus' }}">{{ '+' if t.amount > 0 }}{{ t.amount|money }}</b><div class="muted sm">Balance {{ t.balance_after|money }}</div></div></div>{% endfor %}
+  {% else %}<div class="empty"><h3>No transactions yet</h3><p class="muted">Add money to pay for online jobs, or earn by completing work.</p></div>{% endif %}</div></div>{% endblock %}
