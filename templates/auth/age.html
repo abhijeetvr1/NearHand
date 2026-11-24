@@ -1,0 +1,12 @@
+{% extends 'auth/layout.html' %}{% block title %}One quick question · NearHand{% endblock %}
+{% block side_title %}Work that fits <em>your age.</em>{% endblock %}
+{% block side_text %}People under 18 only see work that is suitable for them. Adults can see and do all work.{% endblock %}
+{% block box %}<h2>Are you 18 or older?</h2><p class="muted">We ask once so we can show you the right work. You can't change this yourself later.</p>
+<form method="post" action="{{ url_for('auth.age') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="next" value="{{ next }}">
+  <div class="agechoice">
+    <label><input type="radio" name="age" value="adult" required><span><b>I'm 18 or older</b><small>See and do all work. Post work and apply.</small></span></label>
+    <label><input type="radio" name="age" value="minor" required><span><b>I'm under 18</b><small>See only work marked suitable for under-18s. Apply, but not post.</small></span></label>
+  </div>
+  <button class="btn primary lg block">Continue</button>
+</form>
+<form method="post" action="{{ url_for('auth.logout') }}" style="text-align:center;margin-top:16px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn ghost sm">Log out instead</button></form>{% endblock %}
