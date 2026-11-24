@@ -1,0 +1,26 @@
+{% extends 'base.html' %}{% import '_m.html' as m with context %}{% block title %}History & earnings · NearHand{% endblock %}
+{% macro art(o) %}<img src="{{ url_for('static', filename='images/cat/' ~ (o.category|catslug) ~ '.svg') }}" alt="" loading="lazy">{% endmacro %}
+{% block content %}
+<div class="homehead"><h1 style="font-size:24px">History &amp; earnings</h1><a class="walletpill" href="{{ url_for('profile.wallet') }}">{{ m.icon('wallet',18) }}<span data-balance>{{ current_user.balance|money }}</span></a></div>
+<div class="statrow" style="margin:4px 0 22px"><div><b class="plus">+{{ earned|money }}</b><span>Earned (after fees)</span></div><div><b class="minus">−{{ spent_total|money }}</b><span>Spent on jobs</span></div><div><b>{{ done_rows|length + created_rows|length }}</b><span>Finished jobs</span></div></div>
+
+<div class="seg wide" data-tabs role="tablist"><button type="button" class="{{ 'on' if tab == 'done' }}" data-wtab="done" role="tab">Jobs done <span class="n">{{ done_rows|length }}</span></button><button type="button" class="{{ 'on' if tab == 'created' }}" data-wtab="created" role="tab">Jobs created <span class="n">{{ created_rows|length }}</span></button></div>
+
+<div data-swipe data-region="history">
+<section data-wpane="done" {{ 'hidden' if tab != 'done' }}>
+  {% if done_rows %}{% for r in done_rows %}{% set o = r.order %}
+  <a class="hrow" href="{{ url_for('orders.detail', oid=o.id) }}">{{ art(o) }}
+    <div class="tx"><b>{{ o.title }}</b><div class="meta">{{ o.maker.name }} · {{ o.created|dt('%d %b %Y') }} · <span class="badge b-{{ o.status }}">{{ STATUS[o.status] }}</span></div></div>
+    <div class="amt">{% if r.amount %}<b class="plus">+{{ r.amount|money }}</b><small>{{ 'Added to wallet' if r.in_wallet else 'Earned' }}</small>{% else %}<b class="muted">₹0</b><small>No payment</small>{% endif %}</div></a>
+  {% endfor %}
+  {% else %}<div class="empty" style="margin-top:16px"><div class="ico">{{ m.icon('briefcase',28) }}</div><h3>No finished jobs yet</h3><p class="muted" style="margin-bottom:16px">Jobs you complete will show here with the money added to your wallet.</p><a class="btn primary" href="{{ url_for('market.index') }}">Find work</a></div>{% endif %}
+</section>
+<section data-wpane="created" {{ 'hidden' if tab != 'created' }}>
+  {% if created_rows %}{% for r in created_rows %}{% set o = r.order %}
+  <a class="hrow" href="{{ url_for('orders.detail', oid=o.id) }}">{{ art(o) }}
+    <div class="tx"><b>{{ o.title }}</b><div class="meta">{{ o.created|dt('%d %b %Y') }} · {{ PAY[o.pay_method] }} · <span class="badge b-{{ o.status }}">{{ STATUS[o.status] }}</span></div></div>
+    <div class="amt">{% if r.amount %}<b class="minus">−{{ r.amount|money }}</b><small>Paid to {{ r.people }} {{ 'person' if r.people == 1 else 'people' }}</small>{% else %}<b class="muted">₹0</b><small>Nothing paid</small>{% endif %}</div></a>
+  {% endfor %}
+  {% else %}<div class="empty" style="margin-top:16px"><div class="ico">{{ m.icon('plus',28) }}</div><h3>No finished jobs yet</h3><p class="muted" style="margin-bottom:16px">Jobs you post and finish will show here with what you paid.</p><a class="btn primary" href="{{ url_for('orders.new') }}">Post work</a></div>{% endif %}
+</section>
+</div>{% endblock %}
