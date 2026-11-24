@@ -1,0 +1,16 @@
+{% extends 'base.html' %}{% import '_m.html' as m with context %}{% block content %}
+<a class="muted" href="{{ url_for('orders.detail', oid=o.id) }}">← {{ o.title }}</a>
+<div class="row between" style="margin:12px 0 20px"><h1 style="font-size:28px">Applicants</h1><span class="badge b-{{ o.status }}">{{ o.accepted }} of {{ o.workers_needed }} accepted · {{ STATUS[o.status] }}</span></div>
+{% if o.accepted and o.status in ['open','fully_booked','in_progress'] %}<a class="btn primary" style="margin-bottom:14px" href="{{ url_for('orders.live', oid=o.id) }}">{{ m.icon('locate',16) }}Track accepted workers live</a>{% endif %}
+<div data-region="apps">{% if apps %}<div class="stack">{% for a in apps %}<div class="panel stack" style="--g:10px"><div class="row between">
+ <a class="row" href="{{ url_for('profile.view', username=a.worker.username) }}">{{ m.avatar(a.worker, 40) }}<div><b>{{ a.worker.name }}</b><div class="sm muted">{{ m.rating(a.worker) }} · {{ a.worker.level }} · {{ a.worker.completed_count }} jobs done</div></div></a>
+ <span class="badge b-{{ 'open' if a.status=='accepted' else ('cancelled' if a.status in ['rejected','removed'] else '') }}">{{ a.status|capitalize }}</span></div>
+ <p>{{ a.message }}</p>{% if a.experience or a.availability or a.portfolio %}<p class="sm muted">{% if a.experience %}Experience: {{ a.experience }}. {% endif %}{% if a.availability %}Available: {{ a.availability }}. {% endif %}{% if a.portfolio %}Portfolio: {{ a.portfolio }}{% endif %}</p>{% endif %}
+ <div class="row">
+  {% if a.status=='pending' %}<form method="post" action="{{ url_for('orders.app_action', oid=o.id, aid=a.id, act='accept') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn primary sm">Accept</button></form>
+  <form method="post" action="{{ url_for('orders.app_action', oid=o.id, aid=a.id, act='reject') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn sm">Reject</button></form>{% endif %}
+  {% if a.status=='accepted' and o.status in ['open','fully_booked','in_progress'] %}<form method="post" action="{{ url_for('orders.app_action', oid=o.id, aid=a.id, act='remove') }}" data-confirm="Remove {{ a.worker.name }} from this order?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn danger sm">Remove</button></form>{% endif %}
+  <a class="btn sm" href="{{ url_for('profile.thread', username=a.worker.username) }}">Message</a>
+  <details class="menu"><summary class="btn sm danger">{{ m.icon('flag',14) }}Report</summary><div class="pop" style="min-width:250px;padding:12px;right:auto;left:0"><form method="post" action="{{ url_for('orders.report', oid=o.id) }}" class="stack" style="--g:8px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="user_id" value="{{ a.worker_id }}"><select name="reason" required><option value="">Reason…</option>{% for r in reasons %}<option>{{ r }}</option>{% endfor %}</select><button class="btn primary sm block">Send report</button></form></div></details>
+ </div></div>{% endfor %}</div>
+{% else %}<div class="empty"><h3>No applications yet</h3><p class="muted">People nearby will see your order in the marketplace. You'll get a notification when someone applies.</p></div>{% endif %}</div>{% endblock %}
