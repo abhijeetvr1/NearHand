@@ -1,0 +1,6 @@
+{% extends 'base.html' %}{% block content %}<div class="narrow stack" style="margin:0 auto"><h1>{{ title }}</h1>
+{% if name == 'safety' %}<p>Check ratings and reviews before you accept or apply. Keep chats inside NearHand. Never share passwords, OTPs, card or bank details, and never pay to get a job. Exact addresses are shared only with accepted workers. Report anything suspicious from any order or profile; every report is reviewed.</p>
+{% elif name == 'privacy' %}<p>We store the details you give us and only an approximate location (about 1 km). Your live location is kept in your session, not our database. Passwords are hashed. This is a starter policy: replace it with your own before launch.</p>
+{% elif name == 'terms' %}<p>Makers and workers agree work and payment between themselves. NearHand provides the marketplace, ratings and moderation. Fraud, harassment and unsafe work lead to removal. This is a starter text: replace it with reviewed legal terms before launch.</p>
+{% elif name == 'contact' %}<p>Use the help button at the bottom right to open a support ticket. We reply by email.</p>
+{% else %}<p>NearHand connects people who have a task with people nearby who can do it, with ratings, privacy-first locations and moderation built in.</p>{% endif %}</div>{% endblock %}
