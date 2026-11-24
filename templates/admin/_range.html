@@ -1,0 +1,2 @@
+<form class="row" method="get" style="margin-bottom:18px">{% for k,l in ranges %}<button name="range" value="{{ k }}" class="btn sm {{ 'primary' if r==k }}" {{ 'type=submit' }}>{{ l }}</button>{% endfor %}
+{% if r == 'custom' %}<input type="date" name="from" value="{{ args.get('from','') }}" style="width:auto"><input type="date" name="to" value="{{ args.get('to','') }}" style="width:auto"><button class="btn sm">Apply</button>{% endif %}</form>
