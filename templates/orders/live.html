@@ -1,0 +1,30 @@
+{% extends 'base.html' %}{% import '_m.html' as m with context %}{% block title %}Live route · {{ o.title }}{% endblock %}
+{% block content %}
+<div class="row between" style="margin-bottom:12px"><a class="muted" href="{{ url_for('orders.detail', oid=o.id) }}">← {{ o.title }}</a><span class="badge b-{{ o.status }}">{{ STATUS[o.status] }}</span></div>
+<h1 style="font-size:26px;margin-bottom:4px">{{ 'Your route to the job' if role == 'worker' else 'Workers on the way' }}</h1>
+<p class="muted" style="margin-bottom:14px">{% if role == 'worker' %}Follow the line to the job. {{ o.maker.name.split()[0] }} can see where you are while sharing is on.{% else %}See where each accepted worker is and the line to the job location. Positions update every few seconds.{% endif %}</p>
+
+{% if not active %}<div class="notice">This job is {{ STATUS[o.status]|lower }}, so live tracking has stopped and shared positions were deleted.</div>
+{% elif not dest %}<div class="notice">This job has no map location yet.</div>
+{% else %}
+{% if role == 'worker' and blocked_why %}<div class="notice" style="margin-bottom:12px"><b>{{ blocked_why }}</b> Live route sharing is switched off outside those hours.</div>{% endif %}
+{% if dest.approx %}<div class="notice" style="margin-bottom:12px">The maker didn't pin an exact meeting point, so this shows the approximate area (about 1 km). Check the exact address below, or message {{ o.maker.name.split()[0] }}.</div>{% endif %}
+<div class="livewrap">
+ <div id="live-map" class="livemap" data-role="{{ role }}" data-oid="{{ o.id }}" data-lat="{{ dest.lat }}" data-lng="{{ dest.lng }}" data-approx="{{ 1 if dest.approx else 0 }}" data-blocked="{{ 1 if blocked_why else 0 }}" data-title="{{ o.title }}"></div>
+ <div class="livepanel stack" style="--g:12px">
+  <div class="stack" style="--g:4px"><b>{{ o.title }}</b><span class="muted sm">{{ m.icon('pin',14) }} {{ o.area }}{% if o.exact_address %} · {{ o.exact_address }}{% endif %}</span></div>
+  {% if role == 'worker' %}
+   <div class="livestats"><div><b id="lv-dist">–</b><span>Distance</span></div><div><b id="lv-eta">–</b><span>Estimated time</span></div><div><b id="lv-state">Off</b><span>Sharing</span></div></div>
+   <div class="seg" id="lv-mode"><button type="button" class="on" data-mode="car">Drive</button><button type="button" data-mode="bike">Bike</button><button type="button" data-mode="foot">Walk</button></div>
+   <div class="row"><button class="btn primary grow" id="lv-start" type="button" {{ 'disabled' if blocked_why }}>{{ m.icon('locate',16) }}Start navigation</button><button class="btn" id="lv-stop" type="button" hidden>Stop sharing</button><button class="btn" id="lv-fit" type="button">Recenter</button></div>
+   <div class="hint" id="lv-msg">Keep this page open while you travel. Your position is shared with {{ o.maker.name.split()[0] }} only while sharing is on, and is deleted when the job ends.</div>
+   <div class="row"><a class="btn sm" href="{{ url_for('profile.thread', username=o.maker.username) }}">Message {{ o.maker.name.split()[0] }}</a><a class="btn sm" href="geo:{{ dest.lat }},{{ dest.lng }}">Open in maps app</a></div>
+  {% else %}
+   <div id="lv-list" class="stack" style="--g:10px"><div class="muted sm">Loading workers…</div></div>
+   <div class="row"><button class="btn sm" id="lv-fit" type="button">Show everyone</button><a class="btn sm" href="{{ url_for('orders.manage', oid=o.id) }}">Manage workers</a></div>
+   <div class="hint">A worker appears here once they open their route and start sharing. Positions are deleted when the job ends.</div>
+  {% endif %}
+ </div>
+</div>
+{% endif %}{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/live.js') }}"></script>{% endblock %}
