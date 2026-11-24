@@ -1,0 +1,25 @@
+{% extends 'base.html' %}{% import '_m.html' as m with context %}{% block title %}Home · NearHand{% endblock %}
+{% block bodycls %}show-footer{% endblock %}
+{% macro art(o) %}<img src="{{ url_for('static', filename='images/cat/' ~ (o.category|catslug) ~ '.svg') }}" alt="" loading="lazy">{% endmacro %}
+{% block content %}
+<div class="homehead"><h1>Hi, {{ current_user.name.split()[0] }}</h1><a class="walletpill" href="{{ url_for('profile.wallet') }}">{{ m.icon('wallet',18) }}<span data-balance>{{ current_user.balance|money }}</span></a></div>
+<div class="pushbar" id="pushbar" hidden><div><b>Get notified</b><span>Hear about messages and applicants, even when the app is closed.</span></div><div class="row" style="gap:8px"><button class="btn primary sm" data-push-enable>Turn on</button><button class="btn ghost sm" id="pushbar-skip" type="button">Not now</button></div></div>
+<div class="seg wide" data-tabs role="tablist"><button type="button" class="{{ 'on' if tab == 'posted' }}" data-wtab="posted" role="tab">Posted jobs <span class="n">{{ posted|length }}</span></button><button type="button" class="{{ 'on' if tab == 'working' }}" data-wtab="working" role="tab">Working jobs <span class="n">{{ working|length }}</span></button></div>
+
+<div data-swipe>
+<section data-wpane="posted" {{ 'hidden' if tab != 'posted' }}><div data-region="posted">
+  {% if waiting %}<div class="notice" style="margin:14px 0 0">{{ waiting }} {{ 'person is' if waiting == 1 else 'people are' }} waiting for your reply.</div>{% endif %}
+  {% if posted %}<div class="jlist">{% for o in posted %}{% set pend = o.applications|selectattr('status','equalto','pending')|list|length %}
+    <div class="jcard" style="animation-delay:{{ [loop.index0, 8]|min * 40 }}ms">
+      <a class="jtop" href="{{ url_for('orders.detail', oid=o.id) }}">{{ art(o) }}<div class="tx"><b>{{ o.title }}</b><div class="meta">{{ o.pay_per_worker|money }} per person · {{ o.accepted }}/{{ o.workers_needed }} accepted</div></div></a>
+      <div class="jbot"><span class="badge b-{{ o.status }}">{{ STATUS[o.status] }}</span><div class="acts">{% if pend %}<span class="chip">{{ pend }} new</span>{% endif %}{% if o.status in ['open','fully_booked','in_progress'] %}<a class="btn sm" href="{{ url_for('orders.manage', oid=o.id) }}">Manage</a>{% else %}<a class="btn sm" href="{{ url_for('orders.detail', oid=o.id) }}">View</a>{% endif %}</div></div></div>{% endfor %}</div>
+  {% else %}<div class="empty" style="margin-top:16px"><div class="ico">{{ m.icon('plus',28) }}</div><h3>No posted jobs yet</h3><p class="muted" style="margin-bottom:16px">Need a hand? Post your first job and get help from people nearby.</p>{% if current_user.is_adult %}<a class="btn primary" href="{{ url_for('orders.new') }}">Post work</a>{% else %}<span class="muted sm">Posting work is for 18+ accounts.</span>{% endif %}</div>{% endif %}
+</div></section>
+<section data-wpane="working" {{ 'hidden' if tab != 'working' }}><div data-region="working">
+  {% if working %}<div class="jlist">{% for a in working %}{% set o = a.order %}
+    <div class="jcard" style="animation-delay:{{ [loop.index0, 8]|min * 40 }}ms">
+      <a class="jtop" href="{{ url_for('orders.detail', oid=o.id) }}">{{ art(o) }}<div class="tx"><b>{{ o.title }}</b><div class="meta">{{ o.maker.name }} · {{ o.pay_per_worker|money }} per person</div></div></a>
+      <div class="jbot">{% if a.status == 'pending' %}<span class="badge">Applied</span>{% elif o.status in ['in_progress','completed','closed','cancelled'] %}<span class="badge b-{{ o.status }}">{{ STATUS[o.status] }}</span>{% else %}<span class="badge b-open">Accepted</span>{% endif %}
+        <div class="acts">{% if a.status == 'accepted' %}<a class="btn sm" href="{{ url_for('profile.thread', username=o.maker.username) }}">{{ m.icon('chat',14) }}Chat</a>{% endif %}<a class="btn sm" href="{{ url_for('orders.detail', oid=o.id) }}">View</a></div></div></div>{% endfor %}</div>
+  {% else %}<div class="empty" style="margin-top:16px"><div class="ico">{{ m.icon('search',28) }}</div><h3>No working jobs yet</h3><p class="muted" style="margin-bottom:16px">Apply to jobs near you and they will show up here.</p><a class="btn primary" href="{{ url_for('market.index') }}">Find work</a></div>{% endif %}
+</div></section></div>{% endblock %}
