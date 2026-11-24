@@ -1,0 +1,68 @@
+{% extends 'base.html' %}{% import '_m.html' as m with context %}{% block title %}{{ o.title }} · NearHand{% endblock %}
+{% macro reportform(label='Report order', uid=none) %}
+<details class="menu"><summary class="btn sm danger">{{ m.icon('flag',15) }}{{ label }}</summary><div class="pop" style="min-width:260px;padding:12px;right:auto;left:0">
+<form method="post" action="{{ url_for('orders.report', oid=o.id) }}" class="stack" style="--g:8px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% if uid %}<input type="hidden" name="user_id" value="{{ uid }}">{% endif %}
+<select name="reason" required><option value="">Reason…</option>{% for r in reasons %}<option>{{ r }}</option>{% endfor %}</select><textarea name="details" style="min-height:70px" placeholder="What happened? (optional)"></textarea><button class="btn primary sm block">Send report</button></form></div></details>{% endmacro %}
+{% block bodycls %}{{ 'has-cta' if not mine and o.status == 'open' and not (my_app and my_app.status != 'withdrawn') }}{% endblock %}
+{% block content %}
+<div id="lightbox" class="lb" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden>
+  <button type="button" class="lb-x" data-lb="close" aria-label="Close photo viewer">×</button>
+  <button type="button" class="lb-n prev" data-lb="prev" aria-label="Previous photo">‹</button>
+  <div class="lb-stage" data-lb="bg"><img id="lb-img" alt="" draggable="false"></div>
+  <button type="button" class="lb-n next" data-lb="next" aria-label="Next photo">›</button>
+  <div class="lb-c" id="lb-count"></div>
+</div>
+<div class="row" style="margin-bottom:14px"><a class="muted" href="{{ url_for('market.index') }}">← All work</a></div>
+<div class="split"><div class="stack" style="--g:18px">
+ <div class="panel flat stack">
+  <div class="dimg"><img src="{{ url_for('static', filename='images/cat/' ~ (o.category|catslug) ~ '.svg') }}" alt=""></div>
+  <div class="row"><span class="chip">{{ o.category }}</span>{% if not o.adult_only %}<span class="chip">Under-18 OK</span>{% else %}<span class="chip plain">18+</span>{% endif %}<span class="badge b-{{ o.status }}">{{ STATUS[o.status] }}</span>{% if o.reviewed_by_admin %}<span class="badge">Reviewed by moderators</span>{% endif %}</div>
+  <h1 style="font-size:30px">{{ o.title }}</h1>
+  <div class="price"><b style="font-size:32px">{{ o.pay_per_worker|money }}</b><span>per person{% if o.bonus %} · {{ o.bonus|money }} bonus{% endif %}</span></div>
+  <dl class="kv"><div><dt>People</dt><dd>{{ o.accepted }} of {{ o.workers_needed }} accepted</dd></div><div><dt>Duration</dt><dd>{{ DURATION[o.duration] }}</dd></div>
+   <div><dt>Payment</dt><dd>{{ PAY[o.pay_method] }}</dd></div><div><dt>Dates</dt><dd>{{ o.start_date|dt('%d %b') }} to {{ o.deadline|dt('%d %b') }}</dd></div>
+   <div><dt>Location</dt><dd>{{ o.area }}{% if dist is not none %} · {{ fmt_km(dist) }} away{% endif %}</dd></div><div><dt>Worker radius</dt><dd>Within {{ o.radius_km }} km</dd></div>{% if o.work_from %}<div><dt>Work hours</dt><dd>{{ o.work_from|tm }} to {{ o.work_to|tm }}</dd></div>{% endif %}</dl>
+ </div>
+ <div class="panel stack"><h3>About the work</h3>{% if o.photos %}<div class="gallery" data-gallery>{% for p in o.photos %}<button type="button" class="gph{{ ' hero' if loop.first }}" data-lightbox="{{ url_for('static', filename='uploads/photos/' ~ p.name) }}" aria-label="View photo {{ loop.index }} of {{ o.photos|length }}"><img src="{{ url_for('static', filename='uploads/photos/' ~ (p.name if loop.first else 't_' ~ p.name)) }}" alt="Job photo {{ loop.index }}">{% if loop.first %}<span class="gall">{{ m.icon('image',14) }}{{ 'View all ' ~ o.photos|length ~ ' photos' if o.photos|length > 1 else 'View photo' }}</span>{% endif %}</button>{% endfor %}</div>{% endif %}{% if o.audio %}<div class="voice"><b class="sm">Voice note from {{ o.maker.name.split()[0] }} · {{ o.audio_seconds|mmss }}</b><audio controls preload="none" src="{{ url_for('static', filename='uploads/audio/' ~ o.audio) }}"></audio></div>{% endif %}<p style="white-space:pre-line">{{ o.description }}</p>
+  {% if o.skills %}<div class="row">{% for s in o.skills.split(',') %}<span class="chip plain">{{ s.strip() }}</span>{% endfor %}</div>{% endif %}
+  {% if o.conditions %}<div><b>Terms</b><p class="muted">{{ o.conditions }}</p></div>{% endif %}
+  {% if show_address and o.exact_address %}<div class="notice"><b>Exact location:</b> {{ o.exact_address }}</div>{% endif %}
+  <div class="notice">Never share passwords, OTPs or bank details. Don't pay anyone to get work.</div></div>
+ {% for u in reviews_todo %}<div class="panel stack"><h3>Rate {{ u.name }}</h3><p class="muted sm">Reviews stay private until you have both rated, or for {{ config.REVIEW_REVEAL_DAYS }} days at most. Then they appear on the profile.</p>
+  <form method="post" action="{{ url_for('orders.review', oid=o.id) }}" class="stack" style="--g:10px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="to" value="{{ u.id }}">
+  {{ m.starpicker() }}<textarea name="text" placeholder="Optional review" style="min-height:70px"></textarea><button class="btn primary" style="align-self:flex-start">Submit review</button></form></div>{% endfor %}
+</div>
+<aside class="sticky stack" style="--g:14px" data-region="side">
+ <div class="panel flat stack">
+  <a class="row" href="{{ url_for('profile.view', username=o.maker.username) }}">{{ m.avatar(o.maker, 44) }}<div><b>{{ o.maker.name }}</b><div class="sm muted">{{ m.rating(o.maker) }} · {{ o.maker.level }}{% if o.maker.verified %} · Verified{% endif %}</div></div></a>
+  {% if mine %}
+   <a class="btn primary block" href="{{ url_for('orders.manage', oid=o.id) }}">Manage workers{% if pending %}<span class="badge-n">{{ pending }}</span>{% endif %}</a>
+   {% if o.accepted and o.status in ['open','fully_booked','in_progress'] %}<a class="btn block" href="{{ url_for('orders.live', oid=o.id) }}">{{ m.icon('locate',16) }}Track workers live</a>{% endif %}
+   {% if o.status in ['draft','open','fully_booked'] %}<a class="btn block" href="{{ url_for('orders.edit', oid=o.id) }}">Edit order</a>{% endif %}
+   {% for act,label,cond in [('start','Start work',o.status in ['open','fully_booked'] and o.accepted),('complete','Mark completed',o.status=='in_progress')] %}{% if cond %}<form method="post" action="{{ url_for('orders.action', oid=o.id, act=act) }}" data-confirm="{{ label }}?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn block">{{ label }}</button></form>{% endif %}{% endfor %}
+   {% if o.status in ['draft','open','fully_booked','in_progress'] %}<form method="post" action="{{ url_for('orders.action', oid=o.id, act='cancel') }}" data-confirm="Cancel this order? Everyone involved will be notified."><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn danger block">Cancel order</button></form>{% endif %}
+   {% if not o.accepted and o.status not in ['completed','closed'] %}<form method="post" action="{{ url_for('orders.delete', oid=o.id) }}" data-confirm="Delete this order permanently?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn danger block">Delete order</button></form>{% endif %}
+  {% elif not current_user.is_authenticated %}
+   {% if o.status == 'open' %}<a class="btn primary block" href="{{ url_for('auth.login', next=request.path) }}">Log in to apply</a>{% endif %}
+  {% elif my_app and my_app.status != 'withdrawn' %}
+   <div class="notice">Your application: <b>{{ my_app.status|capitalize }}</b></div>
+   {% if my_app.status == 'accepted' and o.status in ['open','fully_booked','in_progress'] %}<a class="btn primary block" href="{{ url_for('orders.live', oid=o.id) }}">{{ m.icon('locate',16) }}Open my route to the job</a>{% endif %}
+   {% if can_msg %}<a class="btn block" href="{{ url_for('profile.thread', username=o.maker.username) }}">Message {{ o.maker.name.split()[0] }}</a>{% endif %}
+   {% if my_app.status in ['pending','accepted'] and o.status in ['open','fully_booked'] %}<form method="post" action="{{ url_for('orders.withdraw', oid=o.id) }}" data-confirm="Withdraw your application?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn danger block">Withdraw</button></form>{% endif %}
+  {% elif o.status == 'open' and blocked_why %}<div class="notice">{{ blocked_why }}</div>
+  {% elif o.status == 'open' and out_of_range %}<div class="notice">This job takes workers within {{ o.radius_km }} km. You are about {{ fmt_km(dist) }} away, so you can't apply.</div>
+  {% elif o.status == 'open' and no_loc and o.lat is not none %}<div class="notice">Set your work area so we can check you are inside this job's {{ o.radius_km }} km radius.</div><button class="btn primary block" type="button" data-loc-open>Set my work area</button>
+  {% elif o.status == 'open' %}
+   <button class="btn primary block" type="button" data-open-dialog="#apply-dialog">Apply for work</button>
+  {% else %}<div class="notice">This order isn't taking applications.</div>{% endif %}
+  <div class="row"><button class="btn sm" data-share>{{ m.icon('share',15) }}Share</button>{% if current_user.is_authenticated and not mine %}{{ reportform() }}{% endif %}</div>
+ </div></aside></div>{% if not mine and o.status == 'open' and not blocked_why and not out_of_range and not (my_app and my_app.status != 'withdrawn') %}<div class="cta-bar"><div><b>{{ o.pay_per_worker|money }}</b><span>per person</span></div>{% if current_user.is_authenticated %}<button class="btn primary" type="button" data-open-dialog="#apply-dialog">Apply</button>{% else %}<a class="btn primary" href="{{ url_for('auth.login', next=request.path) }}">Log in to apply</a>{% endif %}</div>{% endif %}
+{% if current_user.is_authenticated and not mine and o.status == 'open' and not blocked_why and not out_of_range and not (my_app and my_app.status != 'withdrawn') %}
+<dialog id="apply-dialog"><div class="sheet-head"><div><h3>Apply for this work</h3><p>{{ o.title }} · {{ o.pay_per_worker|money }} per person</p></div><button class="iconbtn" type="button" data-close-dialog aria-label="Close">{{ m.icon('x',18) }}</button></div>
+<form method="post" action="{{ url_for('orders.apply', oid=o.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div><label for="ap-msg">Why are you a good fit?</label><textarea id="ap-msg" name="message" required minlength="10" maxlength="500" placeholder="Tell the maker about your experience and when you can start." style="min-height:110px"></textarea></div>
+  <div><label for="ap-av">When are you available?</label><input id="ap-av" name="availability" maxlength="120" placeholder="e.g. Weekdays after 5pm"></div>
+  <div><label for="ap-ex">Relevant experience (optional)</label><input id="ap-ex" name="experience" maxlength="300"></div>
+  <div><label for="ap-pf">Portfolio link (optional)</label><input id="ap-pf" name="portfolio" maxlength="200" inputmode="url" autocapitalize="off"></div>
+  <button class="btn primary lg block">Send application</button></form></dialog>{% endif %}
+{% endblock %}
