@@ -1,0 +1,74 @@
+{% extends 'base.html' %}{% import '_m.html' as m with context %}
+{% block title %}NearHand · Find local work. Find reliable people.{% endblock %}
+{% block bodycls %}show-footer lp{% endblock %}
+{% block layout %}
+<header class="lp-nav"><a class="logo" href="{{ url_for('market.landing') }}"><i>{{ m.icon('hand',18) }}</i>NearHand</a>
+  <nav class="links"><a href="#map">Across India</a><a href="#how">How it works</a><a href="#trust">Safety</a><a href="#faq">FAQ</a>
+  {% if current_user.is_authenticated %}<a class="btn primary" href="{{ url_for('market.index') }}">Open app</a>{% else %}<a class="btn" href="{{ url_for('auth.login') }}">Log in</a><a class="btn primary" href="{{ url_for('auth.signup') }}">Sign up</a>{% endif %}</nav></header>
+
+<section class="lp-hero"><div class="aurora"></div>
+  <div class="reveal in">
+    <span class="chip" style="margin-bottom:18px">{{ m.icon('pin',13) }} Local work marketplace · India</span>
+    <h1>Find local work.<br><em>Find reliable people.</em><br>Get things done.</h1>
+    <p class="lead">Post a task and get help from people nearby, or pick up paid work close to home. Real ratings, private locations, and a wallet that keeps payments simple.</p>
+    <div class="hero-map"><canvas id="india-hero" aria-label="Dot map of India with live activity"></canvas>
+      <div class="hero-side">
+        <div class="pt"><b>Work in every state</b><span>Jobs and people from across India.</span></div>
+        <div class="pt"><b>Private by design</b><span>Only an area name and rough distance, never your address.</span></div>
+        <div class="pt"><b>Rated by real people</b><span>Reviews from both sides, shown together.</span></div>
+        <div class="legend"><span><i style="background:#F2B84B"></i>Jobs</span><span><i style="background:#fff"></i>Members</span></div>
+      </div></div>
+    <div class="row"><a class="btn primary lg" href="{{ url_for('auth.signup') }}">Get started free</a><a class="btn lg" href="{{ url_for('market.index') }}">Find work</a><a class="btn ghost lg" href="{{ url_for('market.index') }}">Skip for now →</a></div>
+    <div class="live"><i></i><span>Live activity</span></div><div class="feed" id="feed"></div>
+  </div>
+  <div class="globewrap"><canvas id="globe" aria-label="Globe showing activity across India"></canvas></div>
+  <div class="shade"></div>
+</section>
+
+<section class="lp-sec" id="map"><div class="mapwrap">
+  <canvas id="india" class="reveal" aria-label="Dot map of India with activity"></canvas>
+  <div class="reveal"><span class="chip">Across India</span><h2 style="margin-top:14px">Work is happening near you</h2>
+    <p class="muted" style="max-width:520px;margin-top:8px">Each pulse is a real place where someone joined or posted work. Locations are always approximate (about 1 km), never exact. Amber pulses are jobs, white are new members.</p>
+    <div id="counters" class="bignums"></div>
+    <div class="row" style="margin-top:28px"><a class="btn primary" href="{{ url_for('market.index') }}">Explore nearby work</a></div></div>
+</div></section>
+
+<section class="lp-sec" id="how"><div class="lp-split">
+  <div class="sticky reveal"><span class="chip">How it works</span><h2 style="margin-top:14px">From “I need a hand” to “done and rated”</h2>
+    <p class="muted" style="margin:10px 0 24px;max-width:420px">One account does both. Post work when you need help, apply when you have time.</p><a class="btn primary" href="{{ url_for('auth.signup') }}">Create your account</a></div>
+  <div class="tl">
+    <div class="st reveal"><h3>Post the work</h3><p>Describe the task, drop a pin on the map, set pay per person and how many people you need. Your exact address stays private until you accept someone.</p><span class="tag">For makers</span></div>
+    <div class="st reveal"><h3>Get matched with people nearby</h3><p>People within your radius see the job with a distance. They apply with a short note, and you compare their level, rating and past work.</p><span class="tag">For makers</span><span class="tag">For workers</span></div>
+    <div class="st reveal"><h3>Do the work and stay in touch</h3><p>Accept the people you like, chat in the app, then start the job. Online pay is released from the maker's wallet only when the job is marked complete.</p><span class="tag">For makers</span><span class="tag">For workers</span></div>
+    <div class="st reveal"><h3>Get paid, get rated</h3><p>Earnings land in the worker's wallet minus a small platform fee. Both sides rate each other, and reviews go public together so nobody is rated out of revenge.</p><span class="tag">For workers</span></div>
+  </div></div></section>
+
+<section class="lp-sec"><div class="twocol">
+  <div class="reveal"><span class="chip">If you need help</span><h3>Hire people close by</h3><p class="muted">Cleaning, moving, deliveries, events, design and more.</p>
+    <ul class="checks">{% for t,d in [('Post in about two minutes','Pick a category, set the pay, pin the area.'),('Choose who you trust','Levels, ratings, completion rate and past work on every profile.'),('Pay your way','Online from your wallet, cash on completion, or another method.'),('Stay in control','Cancel, remove a worker or report problems any time.')] %}<li>{{ m.icon('check',18) }}<div><b>{{ t }}</b><span>{{ d }}</span></div></li>{% endfor %}</ul></div>
+  <div class="reveal"><span class="chip">If you want work</span><h3>Earn close to home</h3><p class="muted">Pick jobs by distance, pay and time, and build a reputation.</p>
+    <ul class="checks">{% for t,d in [('See distance and pay at a glance','Cards show what matters and nothing else.'),('Apply with a short note','No long forms. Say why you are a good fit.'),('Build a profile that sells for you','Photo, skills, languages, availability and reviews.'),('Withdraw your earnings','Move wallet money to UPI or bank.')] %}<li>{{ m.icon('check',18) }}<div><b>{{ t }}</b><span>{{ d }}</span></div></li>{% endfor %}</ul></div>
+</div></section>
+
+<section class="lp-sec" id="trust"><span class="chip reveal">Trust &amp; safety</span><h2 class="reveal" style="margin:14px 0 24px">Built so strangers can work together</h2>
+  <div class="rowlist">{% for ic,t,d in [('lock','Location privacy','Public pages show only an area name and a rough distance. Exact addresses go to accepted workers only, and we store locations at about 1 km precision.'),('trophy','Reputation you can’t fake','Levels come from completed jobs, ratings, completion rate and account age. Violations lower them. Only revealed reviews count.'),('users','Blind, two-way reviews','After a job, both sides rate each other. Reviews appear together, so nobody can retaliate or be pressured.'),('shield','Reports and moderation','Every report goes to a moderation queue. Admin actions are written to an audit log.'),('wallet','Payments you can see','Every wallet movement is in your ledger. Online payments are released only when the maker marks the job complete.')] %}<div class="r reveal">{{ m.icon(ic,26) }}<h3>{{ t }}</h3><p>{{ d }}</p></div>{% endfor %}</div></section>
+
+<section class="lp-sec lp-faq" id="faq"><h2 class="reveal" style="margin-bottom:22px">Questions, answered</h2>
+  {% for q,a in [('Is NearHand free?','Joining and browsing are free. A small platform fee is taken from the worker’s share on online payments.'),('How do payments work?','Makers add money to their wallet and pay online when a job is completed. Cash jobs are settled directly between you. Real payment gateways are coming soon.'),('Who can see where I am?','Nobody sees your exact location. Profiles show an area name, jobs show an area and a rough distance, and exact addresses are shared only with accepted workers.'),('Can I both post and take work?','Yes. One account does both, and your profile shows work you posted and work you completed.'),('What if something goes wrong?','Report the order or user. Moderators review it, and you can block people or contact support from the help button.')] %}<details class="reveal"><summary>{{ q }}</summary><p>{{ a }}</p></details>{% endfor %}</section>
+
+<section class="cta reveal"><h2 style="font-size:clamp(26px,3.4vw,40px)">Ready to get something done?</h2><p class="muted" style="margin:10px 0 24px">Join free. Post work or find work in minutes.</p><a class="btn primary lg" href="{{ url_for('auth.signup') }}">Create your account</a></section>
+{% block footer %}<footer class="footer"><div class="row between"><div><a href="{{ url_for('support.page', name='about') }}">About</a><a href="{{ url_for('support.page', name='safety') }}">Safety</a><a href="{{ url_for('support.page', name='terms') }}">Terms</a><a href="{{ url_for('support.page', name='privacy') }}">Privacy</a><a href="{{ url_for('support.page', name='contact') }}">Contact</a></div><span>© NearHand</span></div></footer>{% endblock %}
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/geo.js') }}"></script>
+<script>
+const ago = s => { const d = (Date.now() - new Date(s)) / 1000; return d < 3600 ? Math.max(1, Math.round(d / 60)) + 'm ago' : d < 86400 ? Math.round(d / 3600) + 'h ago' : Math.round(d / 86400) + 'd ago'; };
+const phone = matchMedia('(max-width:900px)').matches;
+(phone ? NHIndia(document.getElementById('india-hero')) : NHGlobe(document.getElementById('globe'))).then(act => {
+  const f = document.getElementById('feed');
+  f.innerHTML = act.feed.length ? act.feed.map((x, i) => `<div style="animation-delay:${i * .12}s">${x.text} · <span class="muted">${ago(x.ts)}</span></div>`).join('') : '<div>Be among the first members in your area.</div>';
+  const s = act.stats, c = document.getElementById('counters'), items = [['Members', s.members, ''], ['Jobs posted', s.jobs, ''], ['Completed', s.completed, ''], ['Paid out', s.paid, '₹']].filter(x => x[1] > 0);
+  c.innerHTML = items.length ? items.map(([l, v, p]) => `<div><b data-n="${v}" data-p="${p}">0</b><span>${l}</span></div>`).join('') : '<div><b style="font-size:24px">We’re just getting started.</b><span>Join now and be among the first people to work and hire in your city.</span></div>';
+  c.querySelectorAll('[data-n]').forEach(e => countUp(e, +e.dataset.n, e.dataset.p));
+});
+if (!phone) NHIndia(document.getElementById('india'));
+</script>{% endblock %}
