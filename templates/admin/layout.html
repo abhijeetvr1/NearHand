@@ -1,0 +1,8 @@
+{% extends 'base.html' %}{% block title %}{{ 'Admin' if current_user.is_admin else 'Moderation' }} · NearHand{% endblock %}
+{% block support %}{% endblock %}
+{% block layout %}<div class="admin"><nav aria-label="Admin"><a class="logo" href="{{ url_for('admin.overview') }}" style="padding:6px 12px 16px">NearHand <span class="chip">{{ 'Admin' if current_user.is_admin else 'Mod' }}</span></a>
+{% set items = [('admin.overview','Overview',0),('admin.users','Users',0),('admin.orders','Orders',0),('admin.market','Market',0),('admin.reports','Reports',n_reports),('admin.tickets','Support',n_tickets)] %}
+{% if current_user.is_admin %}{% set items = items + [('admin.payments','Payments',n_pay),('admin.revenue','Revenue',0),('admin.controls','Controls',0),('admin.staff','Staff',0),('admin.audit_log','Audit log',0)] %}{% endif %}
+{% for ep,l,n in items %}<a href="{{ url_for(ep) }}" class="{{ 'on' if request.endpoint==ep or (ep=='admin.users' and request.endpoint=='admin.user_detail') }}">{{ l }}{% if n %}<span class="badge-n" style="float:right">{{ n }}</span>{% endif %}</a>{% endfor %}
+<a href="{{ url_for('market.index') }}">Open marketplace</a><a href="{{ url_for('profile.dashboard') }}">My home</a></nav>
+<div class="content">{% if paused_labels %}<div class="notice" style="margin-bottom:14px"><b>Paused:</b> {{ paused_labels|join(', ') }}. {% if current_user.is_admin %}<a class="brand-t" href="{{ url_for('admin.controls') }}">Manage</a>{% endif %}</div>{% endif %}{% block page %}{% endblock %}</div></div>{% endblock %}
