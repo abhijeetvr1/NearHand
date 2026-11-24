@@ -1,0 +1,59 @@
+{% extends 'admin/layout.html' %}{% import '_m.html' as m with context %}{% block page %}
+{% macro act(name, label, cls='', confirm='', extra='') %}<form method="post" action="{{ url_for('admin.user_action', uid=u.id, act=name) }}" {% if confirm %}data-confirm="{{ confirm }}"{% endif %}><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{{ extra|safe }}<button class="btn sm {{ cls }}">{{ label }}</button></form>{% endmacro %}
+<a class="muted" href="{{ url_for('admin.users') }}">← All users</a>
+<div class="uhead">{{ m.avatar(u, 72) }}<div class="grow"><h1 style="font-size:28px">{{ u.name }}</h1><div class="muted">@{{ u.username }} · {{ u.email }}{% if u.phone %} · {{ u.phone }}{% endif %}</div>
+ <div class="row" style="margin-top:8px;gap:8px"><span class="chip">UID {{ u.uid }}</span><span class="chip">{{ u.role }}</span><span class="chip plain">{{ '18+' if u.is_adult else ('Under 18' if u.is_minor else 'Age not asked') }}</span><span class="badge b-{{ 'open' if u.status=='active' else 'cancelled' }}">{{ u.status }}</span>{% if u.muted %}<span class="badge b-in_progress">Muted {{ u.mute_until|until }}</span>{% endif %}{% if u.timed_out %}<span class="badge b-in_progress">Timeout {{ u.timeout_until|until }}</span>{% endif %}{% if u.verified %}<span class="chip">✓ Verified</span>{% endif %}</div>
+ {% if u.sanction_note and (u.muted or u.timed_out or u.status != 'active') %}<p class="muted sm" style="margin-top:6px">Last reason: {{ u.sanction_note }}</p>{% endif %}</div>
+ <a class="btn sm" href="{{ url_for('profile.view', username=u.username) }}">Public profile</a></div>
+
+<div class="stats" style="margin:18px 0">{% for l,v in [('Wallet',u.balance|money),('Earned',earned|money),('Spent',spent|money),('Rating',(u.rating or '–')~' ('~u.review_count~')'),('Jobs done',u.completed_count),('Orders posted',u.created_count),('Warnings',u.violations or 0),('Messages sent',msgs_sent),('Devices (push)',devices),('Joined',u.created|dt),('Last seen',u.last_seen|ago if u.last_seen else '—'),('Completion',(u.completion_rate~'%') if u.completion_rate is not none else '–')] %}<div class="stat"><b>{{ v }}</b><span>{{ l }}</span></div>{% endfor %}</div>
+
+<div class="ugrid">
+<div class="stack" style="--g:16px">
+ <div class="panel stack" style="--g:10px"><h3>Moderation</h3>
+  <form method="post" action="{{ url_for('admin.user_action', uid=u.id, act='mute') }}" class="sanc"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><select name="duration">{% for c,l,s in durations %}<option value="{{ c }}" {{ 'selected' if c=='24h' }}>{{ l }}</option>{% endfor %}</select><input name="reason" placeholder="Reason (the user sees it)" maxlength="150"><button class="btn sm">Mute (no chat)</button></form>
+  <form method="post" action="{{ url_for('admin.user_action', uid=u.id, act='timeout') }}" class="sanc"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><select name="duration">{% for c,l,s in durations %}<option value="{{ c }}" {{ 'selected' if c=='24h' }}>{{ l }}</option>{% endfor %}</select><input name="reason" placeholder="Reason (the user sees it)" maxlength="150"><button class="btn sm">Timeout (read-only)</button></form>
+  <form method="post" action="{{ url_for('admin.user_action', uid=u.id, act='warn') }}" class="sanc"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input name="reason" placeholder="Warning text" maxlength="150" class="grow"><button class="btn sm">Warn</button></form>
+  <div class="row">{% if u.muted %}{{ act('unmute','Lift mute') }}{% endif %}{% if u.timed_out %}{{ act('untimeout','Lift timeout') }}{% endif %}{% if u.violations %}{{ act('clear_warnings','Clear warnings') }}{% endif %}
+   {% if u.status == 'active' %}{{ act('suspend','Suspend','danger','Suspend @' ~ u.username ~ '? They cannot log in.') }}{% else %}{{ act('restore','Restore account') }}{% endif %}
+   {% if current_user.is_admin and u.status != 'banned' %}{{ act('ban','Ban','danger','Ban @' ~ u.username ~ '?') }}{% endif %}
+   {% if current_user.is_admin %}{{ act('unverify' if u.verified else 'verify', 'Remove badge' if u.verified else 'Verify') }}{% endif %}</div>
+  <p class="hint">Mute stops chat only. Timeout makes the account read-only: no posting, applying, chat or money requests. Suspend and ban block login.</p></div>
+
+ {% if current_user.is_admin %}
+ <div class="panel stack" style="--g:10px"><h3>Edit profile data</h3>
+  <form method="post" action="{{ url_for('admin.user_action', uid=u.id, act='edit') }}" class="stack" style="--g:10px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+   <div class="grid2"><div><label>Name</label><input name="name" value="{{ u.name }}"></div><div><label>Username</label><input name="username" value="{{ u.username }}"></div></div>
+   <div class="grid2"><div><label>Email</label><input name="email" value="{{ u.email }}"></div><div><label>Phone</label><input name="phone" value="{{ u.phone or '' }}"></div></div>
+   <div><label>Headline</label><input name="headline" value="{{ u.headline or '' }}" maxlength="80"></div><div><label>Bio</label><input name="bio" value="{{ u.bio or '' }}" maxlength="300"></div>
+   <div><label>Work description</label><textarea name="work_description" maxlength="600">{{ u.work_description or '' }}</textarea></div>
+   <div class="grid2"><div><label>Skills</label><input name="skills" value="{{ u.skills or '' }}"></div><div><label>Experience</label><input name="experience" value="{{ u.experience or '' }}"></div></div>
+   <div class="grid2"><div><label>Area</label><input name="area" value="{{ u.area or '' }}"></div><div><label>Languages</label><input name="languages" value="{{ u.languages or '' }}"></div></div>
+   <div class="grid2"><div><label>Availability</label><select name="availability"><option value="">Not set</option>{% for a in ['Weekdays','Weekends','Evenings','Anytime'] %}<option {{ 'selected' if u.availability==a }}>{{ a }}</option>{% endfor %}</select></div><div><label>Work radius (km)</label><input name="work_radius_km" type="number" min="1" max="500" value="{{ u.work_radius_km or 25 }}"></div></div>
+   <label class="check"><input type="checkbox" name="email_verified" {{ 'checked' if u.email_verified }}> Email verified</label>
+   <button class="btn primary" style="align-self:flex-start">Save changes</button></form></div>
+ {% endif %}
+
+ <div class="panel stack" style="--g:8px"><h3>Staff note <span class="muted sm">private</span></h3><form method="post" action="{{ url_for('admin.user_action', uid=u.id, act='note') }}" class="stack" style="--g:8px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><textarea name="note" maxlength="500" placeholder="Notes for other staff">{{ u.admin_note or '' }}</textarea><button class="btn sm" style="align-self:flex-start">Save note</button></form></div>
+</div>
+
+<div class="stack" style="--g:16px">
+ {% if current_user.is_admin %}
+ <div class="panel stack" style="--g:10px"><h3>Wallet</h3><p class="muted sm">Current balance <b>{{ u.balance|money }}</b>. Use a negative number to take money away.</p>
+  <form method="post" action="{{ url_for('admin.user_action', uid=u.id, act='wallet') }}" class="stack" style="--g:8px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="grid2"><input name="amount" type="number" placeholder="Amount ₹ (e.g. 500 or -200)" required><input name="note" placeholder="Note" maxlength="90" required></div><button class="btn primary sm" style="align-self:flex-start">Apply to wallet</button></form></div>
+ <div class="panel stack" style="--g:10px"><h3>Role, age group and password</h3>
+  <div class="row">{% if u.is_admin %}{{ act('remove_admin','Remove admin','danger','Remove admin access from @' ~ u.username ~ '?') }}{% else %}{{ act('make_admin','Make admin','',  'Give @' ~ u.username ~ ' full admin access?') }}{% if u.is_mod %}{{ act('remove_mod','Remove moderator','danger') }}{% else %}{{ act('make_mod','Make moderator') }}{% endif %}{% endif %}</div>
+  <form method="post" action="{{ url_for('admin.user_action', uid=u.id, act='set_age') }}" class="sanc"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><select name="age"><option value="adult" {{ 'selected' if u.is_adult }}>18 or older</option><option value="minor" {{ 'selected' if u.is_minor }}>Under 18</option><option value="">Ask again</option></select><button class="btn sm">Set age group</button></form>
+  <div class="row">{{ act('resetpw','Reset password','', 'Create a temporary password for @' ~ u.username ~ '?') }}{{ act('delete','Delete account','danger','Delete @' ~ u.username ~ ' permanently? Only possible without order history.') }}</div></div>
+ {% endif %}
+ <div class="panel" style="padding:14px"><h3 style="margin-bottom:8px">Reports</h3>{% for r in against %}<div class="mini"><b>Against: {{ r.reason }}</b> <span class="badge">{{ r.status }}</span><div class="muted sm">{{ r.created|ago }}{% if r.order_id %} · order #{{ r.order_id }}{% endif %}{% if r.resolution %} · {{ r.resolution }}{% endif %}</div></div>{% endfor %}{% for r in by_me %}<div class="mini"><b>Filed: {{ r.reason }}</b> <span class="badge">{{ r.status }}</span><div class="muted sm">{{ r.created|ago }}</div></div>{% endfor %}{% if not against and not by_me %}<p class="muted sm">None.</p>{% endif %}</div>
+ <div class="panel" style="padding:14px"><h3 style="margin-bottom:8px">Money requests</h3>{% for r in reqs %}<div class="mini"><b>{{ r.kind }} {{ r.amount|money }}</b> <span class="badge">{{ r.status }}</span><div class="muted sm">{{ r.created|ago }}</div></div>{% else %}<p class="muted sm">None.</p>{% endfor %}</div>
+ <div class="panel" style="padding:14px"><h3 style="margin-bottom:8px">Staff history</h3>{% for l in log %}<div class="mini"><b>{{ l.action }}</b><div class="muted sm">{{ l.created|dt('%d %b %H:%M') }} · {{ l.admin.name if l.admin else '—' }}{% if l.detail %} · {{ l.detail }}{% endif %}</div></div>{% else %}<p class="muted sm">Nothing yet.</p>{% endfor %}</div>
+</div></div>
+
+<div class="ugrid" style="margin-top:16px">
+ <div class="panel tbl"><h3 style="margin-bottom:8px">Orders posted</h3><table><tr><th>#</th><th>Title</th><th>Status</th><th>Pay</th></tr>{% for o in orders %}<tr><td>{{ o.id }}</td><td><a href="{{ url_for('orders.detail', oid=o.id) }}">{{ o.title }}</a></td><td><span class="badge b-{{ o.status }}">{{ STATUS[o.status] }}</span></td><td>{{ o.pay_per_worker|money }}</td></tr>{% else %}<tr><td colspan="4" class="muted">None</td></tr>{% endfor %}</table>
+  <h3 style="margin:16px 0 8px">Applications</h3><table><tr><th>Order</th><th>Status</th><th>Date</th></tr>{% for a in apps %}<tr><td><a href="{{ url_for('orders.detail', oid=a.order_id) }}">{{ a.order.title }}</a></td><td>{{ a.status }}</td><td>{{ a.created|dt }}</td></tr>{% else %}<tr><td colspan="3" class="muted">None</td></tr>{% endfor %}</table></div>
+ <div class="panel tbl"><h3 style="margin-bottom:8px">Wallet history</h3><table><tr><th>When</th><th>Note</th><th>Amount</th><th>Balance</th></tr>{% for t in txs %}<tr><td>{{ t.created|dt('%d %b %H:%M') }}</td><td>{{ t.note }}</td><td class="{{ 'plus' if t.amount>0 else 'minus' }}">{{ '+' if t.amount>0 }}{{ t.amount|money }}</td><td>{{ t.balance_after|money }}</td></tr>{% else %}<tr><td colspan="4" class="muted">None</td></tr>{% endfor %}</table>
+  <h3 style="margin:16px 0 8px">Reviews received</h3>{% for r in reviews %}<div class="mini"><b>{{ r.rating }}★</b> from {{ r.reviewer.name }} <span class="badge">{{ 'public' if r.is_public else 'hidden' }}</span><div class="muted sm">{{ r.text }}</div></div>{% else %}<p class="muted sm">None.</p>{% endfor %}</div>
+</div>{% endblock %}
