@@ -1,0 +1,9 @@
+.venv/
+instance/*.db
+__pycache__/
+static/uploads/audio/*
+!static/uploads/audio/.gitkeep
+static/uploads/avatars/*
+!static/uploads/avatars/.gitkeep
+static/uploads/photos/*
+!static/uploads/photos/.gitkeep
