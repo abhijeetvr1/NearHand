@@ -1,0 +1,11 @@
+{% extends 'base.html' %}{% import '_m.html' as m with context %}
+{% block support %}{% endblock %}
+{% block layout %}<div class="authpage {% block authclass %}{% endblock %}">
+  <aside class="authside"><a class="logo" href="{{ url_for('market.landing') }}"><i>{{ m.icon('hand',18) }}</i>NearHand</a>
+    <div><h1>{% block side_title %}Local work, done by <em>people you can trust.</em>{% endblock %}</h1><p>{% block side_text %}Post tasks, find paid work nearby, and build a reputation that follows you.{% endblock %}</p>
+    <ul class="authlist">
+      <li>{{ m.icon('pin',20) }}<div>Work close to home<span>See jobs by distance and pay.</span></div></li>
+      <li>{{ m.icon('lock',20) }}<div>Private by design<span>Only an approximate area is ever shown.</span></div></li>
+      <li>{{ m.icon('wallet',20) }}<div>Simple, visible payments<span>Add money, pay online, withdraw earnings.</span></div></li></ul></div>
+    <span class="muted sm" style="position:relative">© NearHand</span></aside>
+  <main class="authmain"><div class="authbox"><a class="logo mlogo" href="{{ url_for('market.landing') }}"><i>{{ m.icon('hand',18) }}</i>NearHand</a>{% block box %}{% endblock %}</div></main></div>{% endblock %}
