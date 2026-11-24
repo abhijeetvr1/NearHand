@@ -1,0 +1,71 @@
+{% extends 'base.html' %}{% import '_m.html' as m with context %}{% block title %}{{ 'Edit' if order else 'Post' }} work · NearHand{% endblock %}
+{% set v = (form if form else (order or {})) %}
+{% macro val(k, d='') %}{{ form.get(k) if form else (order[k] if order and order[k] is not none else d) }}{% endmacro %}
+{% block content %}
+{% if topup %}<dialog id="topup" data-open="1"><h3>Wallet is empty</h3><p class="muted" style="margin:6px 0 16px">Online payments are released from your wallet when a job is completed. You can add demo money now: pay the demo QR and an admin will credit it.</p>
+<a class="btn primary block" href="{{ url_for('profile.wallet', tab='add') }}">Add money</a>
+<button class="skip" id="topup-skip" type="button">Skip for now</button></dialog>{% endif %}<div class="narrow" style="margin:0 auto">
+<h1 style="font-size:30px;margin-bottom:6px">{{ 'Edit work order' if order else 'Post a work order' }}</h1><p class="muted" style="margin-bottom:22px">You'll review a summary before anything is published.</p>
+<form method="post" class="stack" style="--g:18px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="panel stack"><h3>The work</h3>
+ <div><label for="title">Title</label><input id="title" name="title" maxlength="60" data-limit="#title-count" value="{{ val('title') }}" placeholder="e.g. Move Furniture To A New Flat" required>{{ m.err(errors,'title') }}<div class="counter" id="title-count"></div><div class="hint">Short and clear: up to 60 characters and 10 words. We capitalise it for you.</div></div>
+ <div><label for="d">Description</label><textarea id="d" name="description" required>{{ val('description') }}</textarea>{{ m.err(errors,'description') }}</div>
+ <div class="grid2"><div><label>Category</label><select name="category">{% for c in categories %}<option {{ 'selected' if val('category')==c }}>{{ c }}</option>{% endfor %}</select>{{ m.err(errors,'category') }}</div>
+ <div><label>Skills needed</label><input name="skills" value="{{ val('skills') }}" placeholder="Comma separated"></div></div>
+ <div class="grid2"><div><label>People needed</label><input name="workers_needed" type="number" min="1" max="100" value="{{ val('workers_needed','1') }}"></div>
+ <div><label>How long will it take?</label><select name="duration">{% for k,l in DURATION.items() %}<option value="{{ k }}" {{ 'selected' if val('duration','1d')==k }}>{{ l }}</option>{% endfor %}</select></div></div>
+ <div class="grid2"><div><label>Start date</label><input name="start_date" type="date" value="{{ val('start_date') }}"></div><div><label>Deadline</label><input name="deadline" type="date" value="{{ val('deadline') }}">{{ m.err(errors,'deadline') }}</div></div></div>
+<div class="panel stack"><h3>Voice note <span class="chip plain">Optional</span></h3><p class="muted sm">Explain the work in your own voice, up to 1 minute 30 seconds. People can play it in the marketplace before they open your job.</p>
+ {% set an = form.get('audio_name') if form else (order.audio if order else '') %}{% set asec = form.get('audio_seconds') if form else (order.audio_seconds if order else 0) %}
+ <div class="rec" data-rec data-max="{{ max_audio }}" {% if an %}data-url="{{ url_for('static', filename='uploads/audio/' ~ an) }}"{% endif %}>
+  <input type="hidden" name="audio_name" value="{{ an or '' }}"><input type="hidden" name="audio_seconds" value="{{ asec or '' }}"><input type="hidden" name="remove_audio" value="">
+  <div class="rec-idle" data-rec-idle {{ 'hidden' if an }}>{{ m.icon('mic',22) }}<span>No voice note yet.</span></div>
+  <div class="rec-live" data-rec-live hidden><span class="recdot"></span><b data-rec-time>0:00 / 1:30</b><div class="recbar"><i data-rec-bar></i></div></div>
+  <div data-rec-prev {{ 'hidden' if not an }}></div>
+  <div class="row"><button type="button" class="btn" data-rec-start {{ 'hidden' if an }}>{{ m.icon('mic',16) }}Record voice note</button><button type="button" class="btn danger" data-rec-stop>Stop</button><button type="button" class="btn" data-rec-redo hidden>Record again</button><button type="button" class="btn danger" data-rec-del hidden>Delete</button></div>
+  <div class="hint" data-rec-msg></div>
+ </div>{{ m.err(errors,'audio') }}</div>
+<div class="panel stack"><h3>Photos <span class="chip plain">Optional</span></h3><p class="muted sm">Show the place or the task. Up to {{ max_photos }} photos. Everyone who opens your job can see them.</p>
+ {% set pnames = (form.get('photo_names') or '').split(',') if form else [] %}
+ <div class="photos" data-photos data-max="{{ max_photos }}"><input type="hidden" name="photo_names" value="{{ form.get('photo_names','') if form else '' }}"><input type="hidden" name="remove_photos" value="">
+  <div class="pgrid" data-pgrid>{% for p in (order.photos if order else []) %}<figure data-pid="{{ p.id }}"><img src="{{ url_for('static', filename='uploads/photos/t_' ~ p.name) }}" alt="Job photo"><button type="button" data-premove aria-label="Remove this photo">×</button></figure>{% endfor %}{% for n in pnames if n %}<figure data-pname="{{ n }}"><img src="{{ url_for('static', filename='uploads/photos/t_' ~ n) }}" alt="Job photo"><button type="button" data-premove aria-label="Remove this photo">×</button></figure>{% endfor %}</div>
+  <div class="row"><label class="btn" data-padd style="cursor:pointer">{{ m.icon('plus',16) }}Add photos<input type="file" accept="image/*" multiple hidden data-pfile></label><span class="muted sm" data-pcount></span></div>
+  <div class="hint" data-pmsg></div></div>{{ m.err(errors,'photos') }}</div>
+<div class="panel stack"><h3>Payment</h3>
+ <div class="grid2"><div><label>Pay per person (₹)</label><input name="pay_per_worker" type="number" min="1" value="{{ val('pay_per_worker') }}" required>{{ m.err(errors,'pay_per_worker') }}</div><div><label>Bonus, optional (₹ total)</label><input name="bonus" type="number" min="0" value="{{ val('bonus','0') }}"></div></div>
+ <div><label>How will you pay?</label><select name="pay_method">{% for k,l in PAY.items() %}<option value="{{ k }}" {{ 'selected' if val('pay_method','cash')==k }}>{{ l }}</option>{% endfor %}</select><div class="hint">Online payments are recorded for now. A payment gateway can be connected later.</div></div>
+ <div><label>Payment conditions</label><input name="conditions" maxlength="400" value="{{ val('conditions') }}" placeholder="e.g. Paid same day after quality check"></div></div>
+<div class="panel stack"><h3>Work hours</h3><p class="muted sm">The daily start and end time. Required if you open the job to people under 18, who can only work between 6:00 AM and 9:00 PM.</p>
+ <div class="grid2"><div><label for="work_from">Starts at</label><input type="time" id="work_from" name="work_from" value="{{ (val('work_from') if form else (order.work_from.strftime('%H:%M') if order and order.work_from else '')) }}"></div>
+ <div><label for="work_to">Ends at</label><input type="time" id="work_to" name="work_to" value="{{ (val('work_to') if form else (order.work_to.strftime('%H:%M') if order and order.work_to else '')) }}"></div></div>{{ m.err(errors,'work_hours') }}</div>
+<div class="panel stack"><h3>Location</h3><p class="muted sm">We'll try to detect where you are. You can also search for a place or tap the map. Until you accept someone, workers see only the area name and a distance rounded to about 1 km. Your exact pin is shown only to the workers you accept, on their live route map.</p>
+ <input type="hidden" name="lat" id="lat" value="{{ form.get('lat') if form else (order.exact_lat if order and order.exact_lat is not none else val('lat')) }}"><input type="hidden" name="lng" id="lng" value="{{ form.get('lng') if form else (order.exact_lng if order and order.exact_lng is not none else val('lng')) }}">
+ <div class="row"><button type="button" class="btn sm" data-detect>{{ m.icon('locate',16) }}Detect my location</button><div class="mapsearch grow">{{ m.icon('search',16) }}<input id="map-search" placeholder="Search a place" autocomplete="off"></div><button type="button" class="btn sm" data-search-go>Search</button></div>
+ <div class="hint" id="loc-state">{{ 'Pin set. Tap the map or drag the pin to move it.' if val('lat') else 'Finding your location…' }}</div>
+ <div class="mapbox" data-map data-autodetect data-lat="#lat" data-lng="#lng" data-area="#area" data-radius="#radius" data-search="#map-search"></div>{{ m.err(errors,'location') }}
+ <div><label>Nearby area (shown publicly)</label><input name="area" id="area" value="{{ val('area') }}" placeholder="Filled in from the map, or type it" required>{{ m.err(errors,'area') }}</div>
+ {% set cur = (form.get('custom_radius') or form.get('radius_choice')) if form else (order.radius_km if order else 10) %}
+ <div><label for="radius">Worker radius: <b id="radius-out">{{ cur or 10 }} km</b></label><input type="hidden" name="radius_choice" value="custom"><input type="range" id="radius" name="custom_radius" min="1" max="100" value="{{ cur or 10 }}" data-range-out="#radius-out">
+  <div class="row" style="gap:6px;margin-top:8px">{% for r in [1,5,10,25,50] %}<button type="button" class="chip plain pickchip" data-radius-set="{{ r }}" data-radius-target="#radius">{{ r }} km</button>{% endfor %}</div>
+  <div class="hint">Only workers within this distance of your pin can apply. The circle on the map shows the area.</div></div>
+ <div><label>Exact address, private</label><input name="exact_address" value="{{ val('exact_address') }}" placeholder="Shown only to people you accept"></div>
+ <div id="youth-box" class="youth"><label class="check"><input type="checkbox" name="youth_ok" id="youth_ok" value="1" {{ 'checked' if (form.get('youth_ok') if form else (order and not order.adult_only)) }}> <span><b>Suitable for people under 18</b><br><span class="muted sm">Only for safe, low-risk work in {{ config.YOUTH_CATEGORIES|join(', ') }}, between 6:00 AM and 9:00 PM. We check the title, description, category and hours before it is allowed. Otherwise the job is shown to 18+ accounts only.</span></span></label>
+  <div class="ycheck" id="youth-result" aria-live="polite" {{ 'hidden' if not errors.get('youth') }}>{% if errors.get('youth') %}<div class="err">{{ errors.youth }}</div>{% endif %}</div></div></div>
+<div class="row" style="justify-content:flex-end"><a class="btn" href="{{ url_for('market.index') }}">Cancel</a><button class="btn primary">{{ 'Save changes' if order and order.status!='draft' else 'Review summary' }}</button></div>
+</form></div>{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/photos.js') }}"></script><script>
+(() => { const sel = document.querySelector('select[name=category]'), box = document.getElementById('youth-box'), ok = {{ config.YOUTH_CATEGORIES|list|tojson }};
+  const f = () => { const on = ok.includes(sel.value); box.hidden = !on; if (!on) box.querySelector('input').checked = false; hours(); check(); }; sel.addEventListener('change', f);
+  // under-18 safety check: words, category and hours are checked live, the same way the server checks them on save
+  const cb = document.getElementById('youth_ok'), out = document.getElementById('youth-result'), csrf = document.querySelector('meta[name=csrf]')?.content, wf = document.getElementById('work_from'), wt = document.getElementById('work_to'); let t, seq = 0;
+  const hours = () => { if (cb.checked) { wf.min = '06:00'; wf.max = '21:00'; wt.min = '06:00'; wt.max = '21:00'; } else { [wf, wt].forEach(i => { i.removeAttribute('min'); i.removeAttribute('max'); }); } };
+  const val = n => (document.querySelector(`[name=${n}]`)?.value || '');
+  async function check() {
+    if (!cb.checked) { out.hidden = true; return; } const my = ++seq; out.hidden = false; out.innerHTML = '<span class="muted sm">Checking…</span>';
+    try { const r = await fetch('/orders/youth-check', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf}, body: JSON.stringify({title: val('title'), description: val('description'), category: val('category'), skills: val('skills'), conditions: val('conditions'), work_from: val('work_from'), work_to: val('work_to')})}); const j = await r.json(); if (my !== seq) return;
+      out.innerHTML = j.ok ? '<div class="yok">✓ Looks suitable for under-18s.</div>' : '<div class="ybad"><b>Not suitable yet:</b><ul>' + j.issues.map(i => '<li>' + i.replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c])) + '</li>').join('') + '</ul></div>';
+    } catch (e) { out.innerHTML = ''; } }
+  const later = () => { clearTimeout(t); t = setTimeout(check, 500); };
+  cb.addEventListener('change', () => { hours(); check(); }); ['title', 'description', 'skills', 'conditions', 'work_from', 'work_to'].forEach(n => document.querySelector(`[name=${n}]`)?.addEventListener('input', () => cb.checked && later()));
+  f(); })();
+</script>{% endblock %}
