@@ -1,0 +1,17 @@
+{% extends 'base.html' %}{% import '_m.html' as m with context %}{% import 'profile/_blocks.html' as b with context %}
+{% block title %}{{ u.name }} · NearHand{% endblock %}
+{% block content %}<div class="ph"><div class="cover"></div>
+  <div class="who">{{ m.avatar(u, 112) }}<div class="grow"><h1>{{ u.name }}</h1><div class="muted">@{{ u.username }}{% if u.headline %} · {{ u.headline }}{% endif %}</div>
+    <div class="row" style="margin-top:8px;gap:8px"><span class="chip">{{ u.level }}</span>{% if u.verified %}<span class="chip">✓ Verified</span>{% endif %}{% if u.area %}<span class="chip plain">{{ m.icon('pin',12) }} {{ u.area }}</span>{% endif %}</div></div>
+    <div class="row">{% if current_user.is_authenticated %}{% if can_msg %}<a class="btn primary" href="{{ url_for('profile.thread', username=u.username) }}">{{ m.icon('chat',16) }}Chat</a>{% endif %}
+      <details class="menu"><summary class="btn danger">{{ m.icon('flag',14) }}Report</summary><div class="pop" style="min-width:250px;padding:12px"><form method="post" action="{{ url_for('profile.report_user', username=u.username) }}" class="stack" style="--g:8px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><select name="reason" required><option value="">Reason…</option>{% for r in reasons %}<option>{{ r }}</option>{% endfor %}</select><button class="btn primary sm block">Send report</button></form></div></details>
+    {% else %}<a class="btn" href="{{ url_for('auth.login', next=request.path) }}">Log in to contact</a>{% endif %}</div></div>
+  <div class="ptabs" style="margin-bottom:22px"><span style="padding:12px 0"></span></div>
+  <div class="split"><div style="min-width:0">
+    <div class="blk"><div class="statrow"><div><b>{{ m.rating(u) }}</b><span>{{ u.review_count }} review{{ '' if u.review_count == 1 else 's' }}</span></div><div><b>{{ u.completed_count }}</b><span>Jobs done</span></div><div><b>{{ u.created_count }}</b><span>Orders posted</span></div><div><b>{{ (u.completion_rate ~ '%') if u.completion_rate is not none else '—' }}</b><span>Completion rate</span></div></div></div>
+    <div class="blk"><h3>About</h3>{% if u.bio or u.work_description %}{% if u.bio %}<p>{{ u.bio }}</p>{% endif %}{% if u.work_description %}<p class="muted" style="margin-top:8px">{{ u.work_description }}</p>{% endif %}{% else %}<p class="muted">This member hasn’t added a bio yet.</p>{% endif %}{% if u.skill_list %}<div class="row" style="margin-top:12px">{% for s in u.skill_list %}<span class="chip plain">{{ s }}</span>{% endfor %}</div>{% endif %}</div>
+    <div class="blk"><h3>Work posted <small>by {{ u.name.split()[0] }}</small></h3>{{ b.posted(posted) }}</div>
+    <div class="blk"><h3>Work done <small>by {{ u.name.split()[0] }}</small></h3>{{ b.done(done, by_order) }}</div>
+    <div class="blk"><h3>Reviews</h3>{{ b.reviews(revs, dist, u) }}</div></div>
+  <aside class="sticky"><div class="blk" style="padding-top:0"><h3 style="margin-bottom:12px">Details</h3><dl class="kvl"><dt>Level</dt><dd>{{ u.level }}</dd><dt>Experience</dt><dd>{{ u.experience or '—' }}</dd><dt>Languages</dt><dd>{{ u.languages or '—' }}</dd><dt>Availability</dt><dd>{{ u.availability or '—' }}</dd><dt>Area</dt><dd>{{ u.area or '—' }}</dd><dt>Joined</dt><dd>{{ u.created|dt('%b %Y') }}</dd></dl></div>
+</aside></div></div>{% endblock %}
